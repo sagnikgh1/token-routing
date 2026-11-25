@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token routing: interactive results</title>
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e3e6eb; --text: #14171c; --muted: #6a717d;
+  --faint: #9aa1ab; --accent: #4f5bd5; --accent-soft: rgba(79, 91, 213, 0.10); --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 6px 18px rgba(16, 24, 40, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d0f12; --surface: #15181d; --surface-2: #1c2026; --border: #262b33; --text: #e7e9ee; --muted: #9aa1ad;
+    --faint: #6b7280; --accent: #8e98ff; --accent-soft: rgba(142, 152, 255, 0.14); --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font: 14px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; }
+button, select, input { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+
+.app { display: grid; grid-template-columns: 236px 1fr; height: 100vh; }
+
+/* sidebar */
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px 14px; min-height: 0; }
+.brand .title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.brand .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.label { color: var(--faint); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; margin: 22px 6px 8px; }
+#scenes { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; }
+.scene { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 10px; border: 1px solid transparent; background: none; cursor: pointer; text-align: left; }
+.scene:hover { background: var(--surface-2); }
+.scene.on { background: var(--accent-soft); }
+.scene img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; display: block; flex: none; box-shadow: 0 0 0 1px var(--border); }
+.scene.on img { box-shadow: 0 0 0 2px var(--accent); }
+.scene .n { font-weight: 600; font-size: 13.5px; }
+.scene .d { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.side-foot { margin-top: auto; display: flex; gap: 6px; padding-top: 12px; }
+.ghost { flex: 1; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 7px 8px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.ghost:hover { color: var(--text); background: var(--surface-2); }
+
+/* main column */
+.main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px 4px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(16,24,40,.08), 0 0 0 1px var(--border); font-weight: 550; }
+.legend { color: var(--muted); font-size: 13px; }
+
+.stage-wrap { min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px 24px; overflow: hidden; }
+#stage { display: grid; justify-content: center; align-content: center; }
+.panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cap { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; height: 42px; }
+.pick { position: relative; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; line-height: 1.25; padding: 3px 26px 3px 8px; margin-left: -8px; border-radius: 8px; white-space: nowrap; overflow: hidden; }
+.pick:hover { background: var(--surface-2); }
+.pick:focus-within { box-shadow: 0 0 0 2px var(--accent-soft); }
+.pick .m { font-weight: 650; font-size: 13.5px; }
+.pick .k { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.pick .v { color: var(--muted); }
+.pick::after { content: ""; position: absolute; right: 9px; top: 50%; width: 6px; height: 6px; margin-top: -5px; border-right: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint); transform: rotate(45deg); }
+.pick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; -webkit-appearance: none; appearance: none; }
+.fps { display: flex; align-items: baseline; gap: 4px; flex: none; line-height: 1; padding-bottom: 4px; }
+.fps .n { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.fps .u { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+#stage.compact .cap { gap: 6px; }
+#stage.compact .pick { padding-right: 17px; }
+#stage.compact .pick::after { right: 5px; }
+#stage.compact .pick .k { font-size: 12px; }
+#stage.compact .fps { gap: 3px; }
+#stage.compact .fps .n { font-size: 22px; }
+#stage.compact .fps .u { font-size: 10px; letter-spacing: .04em; }
+.frame { border-radius: 10px; overflow: hidden; background: var(--surface-2); box-shadow: var(--shadow); line-height: 0; }
+canvas { display: block; }
+
+/* control dock */
+.dock { padding: 6px 24px 20px; }
+.dock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 10px 14px; max-width: 860px; margin: 0 auto; }
+.transport { display: flex; align-items: center; gap: 10px; }
+.icon { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--text); flex: none; }
+.icon:hover { background: var(--surface-2); }
+.icon.primary { width: 40px; height: 40px; background: var(--text); color: var(--surface); border-color: var(--text); }
+.icon.primary:hover { opacity: .9; }
+.icon svg { width: 16px; height: 16px; fill: currentColor; }
+.icon.primary svg { width: 18px; height: 18px; }
+.fcount { color: var(--muted); font-size: 12.5px; min-width: 74px; text-align: right; }
+.pill { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 10px; cursor: pointer; font-size: 12.5px; color: var(--text); }
+
+input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; width: 100%; margin: 0; cursor: pointer; }
+input[type=range]:focus { outline: none; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(to right, var(--accent) 0 var(--p, 0%), var(--border) var(--p, 0%) 100%); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 999px; background: var(--border); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); margin-top: -6px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+#scrub { flex: 1; }
+
+/* dialogs */
+dialog { border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; max-width: 580px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(10, 12, 16, .35); backdrop-filter: blur(2px); }
+dialog h2 { font-size: 16px; margin: 0 0 10px; }
+dialog p { margin: 8px 0; color: var(--muted); }
+dialog p b { color: var(--text); font-weight: 600; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 6px 0 4px; color: var(--muted); }
+kbd { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; color: var(--text); }
+.close { float: right; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; margin: -6px -8px 0 0; padding: 4px 8px; }
+
+/* full-screen mode: the sidebar shrinks to a rail of scene thumbnails; panels as large as the screen allows */
+body.fs .app { grid-template-columns: 92px 1fr; }
+body.fs .sidebar { padding: 14px 8px; align-items: stretch; }
+body.fs .brand, body.fs .label, body.fs .side-foot, body.fs .scene .d { display: none; }
+body.fs #scenes { gap: 10px; justify-content: center; flex: 1; }
+body.fs .scene { flex-direction: column; gap: 5px; padding: 6px 4px; }
+body.fs .scene img { width: 64px; height: 64px; }
+body.fs .scene .n { font-size: 12px; font-weight: 600; text-align: center; }
+body.fs .topbar { padding: 10px 20px 2px; }
+body.fs .stage-wrap { padding: 8px 16px; }
+body.fs .dock { padding: 4px 16px 12px; }
+.icon.flat svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+#pool { position: fixed; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+#pool video { width: 1px; height: 1px; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100vh; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--border); padding: 14px; }
+  #scenes { flex-direction: row; overflow-x: auto; }
+  .scene .d { display: none; }
+  .label, .side-foot { display: none; }
+  .legend { display: none; }
+}
+.hl { outline: 3px solid #f0914a !important; outline-offset: 3px; }   /* highlight sent by the talk deck (embedded only) */
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="title">Token routing</div><div class="sub">Interactive results</div></div>
+    <div class="label">Scenes</div>
+    <nav id="scenes"></nav>
+    <div class="side-foot"><button class="ghost" id="aboutBtn">About</button><button class="ghost" id="keysBtn">Shortcuts</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="seg" id="trajs" role="tablist" aria-label="Camera trajectory"></div>
+      <div class="legend">16 source views &middot; 256&thinsp;&times;&thinsp;256 &middot; frame rate on one RTX PRO 5000</div>
+    </header>
+    <section class="stage-wrap" id="stageWrap"><div id="stage"></div></section>
+    <footer class="dock">
+      <div class="dock-card">
+        <div class="transport">
+          <button class="icon primary" id="play" aria-label="Play"></button>
+          <button class="icon" id="prev" aria-label="Previous frame"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="icon" id="next" aria-label="Next frame"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg></button>
+          <input type="range" id="scrub" min="0" max="1" step="1" value="0" aria-label="Frame">
+          <span class="fcount num" id="fcount"></span>
+          <select class="pill" id="speed" aria-label="Playback speed"></select>
+          <button class="icon flat" id="fsBtn" aria-label="Full screen" title="Full screen (F)"></button>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<dialog id="about">
+  <button class="close" data-close aria-label="Close">&times;</button>
+  <h2>About these videos</h2>
+  <p>Every video is rendered at 256&thinsp;&times;&thinsp;256 pixels from the same 16 source views of a test scene of DL3DV, sampled uniformly from 300 consecutive frames. One source view gives 1,369 tokens, so the 16 views give 21,904.</p>
+  <p><b>Ours</b> renders each frame from the source tokens that the router selects for that frame's viewpoint, at the budget shown; one ranking per frame serves every budget. No temporal smoothing is applied.</p>
+  <p><b>Whole view</b> gives the decoder all tokens of the source view from which our router selects the most tokens for that frame, and <b>Whole views</b> the two such views (the whole view of Sec. J of the supplementary PDF). <b>All tokens</b> is LagerNVS, which attends to every source token.</p>
+  <p><b>Full trajectory</b> is a smooth path through all 16 source cameras, at constant speed. <b>Simulated head motion</b> moves the camera on a circle around a viewpoint in the middle of the sequence, with its orientation fixed.</p>
+  <p><b>FPS</b> is the measured rate of rendering one frame, from the viewpoint to the image, at 256&thinsp;&times;&thinsp;256 on one NVIDIA RTX PRO 5000 GPU with 16 source views.</p>
+</dialog>
+<dialog id="keys">
+  <button class="close" data-close aria-label="Close">&times;</button>
+  <h2>Keyboard shortcuts</h2>
+  <div class="keys">
+    <span><kbd>Space</kbd></span><span>Play or pause</span>
+    <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd></span><span>Previous or next scene</span>
+    <span><kbd>1</kbd> <kbd>2</kbd></span><span>Full trajectory or simulated head motion</span>
+    <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span><span>Step one frame back or forward</span>
+    <span><kbd>[</kbd> <kbd>]</kbd></span><span>Slower or faster playback</span>
+    <span><kbd>F</kbd></span><span>Full screen on or off (<kbd>Esc</kbd> also leaves it)</span>
+  </div>
+</dialog>
+<div id="pool"></div>
+
+<script>
+const D = {"root": "v", "scenes": [{"dir": "scene1", "label": "Scene 1", "desc": "16 source views", "thumb": "thumbs/scene1.jpg", "frames": {"full": 503, "head": 120}}, {"dir": "scene2", "label": "Scene 2", "desc": "16 source views", "thumb": "thumbs/scene2.jpg", "frames": {"full": 906, "head": 120}}, {"dir": "scene3", "label": "Scene 3", "desc": "16 source views", "thumb": "thumbs/scene3.jpg", "frames": {"full": 541, "head": 120}}, {"dir": "scene4", "label": "Scene 4", "desc": "16 source views", "thumb": "thumbs/scene4.jpg", "frames": {"full": 622, "head": 120}}, {"dir": "scene5", "label": "Scene 5", "desc": "16 source views", "thumb": "thumbs/scene5.jpg", "frames": {"full": 556, "head": 120}}], "trajs": [{"id": "full", "name": "Full trajectory", "rate": 24}, {"id": "head", "name": "Simulated head motion", "rate": 45}], "variants": [{"id": "821", "name": "Ours", "tokens": 821, "views": "0.6 views", "fps": 137.4040104845355}, {"id": "1095", "name": "Ours", "tokens": 1095, "views": "0.8 views", "fps": 126.39540173466773}, {"id": "1369", "name": "Ours", "tokens": 1369, "views": "1 view", "fps": 122.0}, {"id": "1643", "name": "Ours", "tokens": 1643, "views": "1.2 views", "fps": 118.19459540982822}, {"id": "1917", "name": "Ours", "tokens": 1917, "views": "1.4 views", "fps": 113.74721808680741}, {"id": "2190", "name": "Ours", "tokens": 2190, "views": "1.6 views", "fps": 96.15768974899893}, {"id": "2464", "name": "Ours", "tokens": 2464, "views": "1.8 views", "fps": 86.1058262033269}, {"id": "2738", "name": "Ours", "tokens": 2738, "views": "2 views", "fps": 82.8}, {"id": "3194", "name": "Ours", "tokens": 3194, "views": "2⅓ views", "fps": 77.49093307249197}, {"id": "3651", "name": "Ours", "tokens": 3651, "views": "2⅔ views", "fps": 70.62585769089313}, {"id": "4107", "name": "Ours", "tokens": 4107, "views": "3 views", "fps": 66.2}, {"id": "wv1", "name": "Whole view", "tokens": 1369, "views": "1 view", "fps": 121.41179467436267}, {"id": "wv2", "name": "Whole views", "tokens": 2738, "views": "2 views", "fps": 82.49529187429133}, {"id": "all", "name": "All tokens", "tokens": 21904, "views": "16 views", "fps": 20.1}], "groups": [{"label": "Ours", "ids": ["821", "1095", "1369", "1643", "1917", "2190", "2464", "2738", "3194", "3651", "4107"]}, {"label": "Whole views", "ids": ["wv1", "wv2"]}, {"label": "Reference", "ids": ["all"]}], "defaults": ["wv1", "1369", "1917", "2190", "2738", "all"]};
+const EXT = ".mp4";
+const FPS = 30;                       // frame rate the videos are encoded at
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+const VAR = new Map(D.variants.map(v => [v.id, v]));
+const S = { scene: 0, traj: 0, frame: 0, playing: true, speed: 1, picks: D.defaults.slice() };
+const $ = (id) => document.getElementById(id);
+const pool = new Map();
+let shown = -1, busy = false, clock0 = 0, frame0 = 0, gen = 0, scrubbing = false;
+window.__dash = { errors: [], seeks: 0 };
+const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+const ICON_FS = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>';
+const ICON_FS_EXIT = '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>';
+const fmt = (n) => n.toLocaleString("en-US");
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+function nFrames() { return D.scenes[S.scene].frames[D.trajs[S.traj].id]; }
+function rate() { return D.trajs[S.traj].rate * S.speed; }   // frames per second shown at this speed
+function url(si, ti, id) { return D.root + "/" + D.scenes[si].dir + "/" + D.trajs[ti].id + "/" + id + EXT; }
+function optText(v) { return v.id === "all" ? "All tokens · " + fmt(v.tokens) + " (" + v.views + ")" : v.name + " · " + fmt(v.tokens) + " tokens (" + v.views + ")"; }
+function pickHTML(v) {
+  return '<span class="m">' + esc(v.name) + '</span><span class="k num">' + fmt(v.tokens) + ' tokens <span class="v">(' + v.views + ')</span></span>';
+}
+
+function getVideo(u) {
+  let e = pool.get(u);
+  if (e) return e;
+  const v = document.createElement("video");
+  v.muted = true; v.playsInline = true; v.preload = "auto"; v.setAttribute("playsinline", ""); v.setAttribute("muted", "");
+  const ready = new Promise((res) => {
+    const ok = () => { if (v.readyState >= 2) { v.removeEventListener("loadeddata", ok); v.removeEventListener("canplay", ok); res(true); } };
+    v.addEventListener("loadeddata", ok); v.addEventListener("canplay", ok);
+    v.addEventListener("error", () => { window.__dash.errors.push("video error " + u); res(false); });
+  });
+  v.src = u; $("pool").appendChild(v); v.load();
+  e = { v, ready, u }; pool.set(u, e); return e;
+}
+function currentKeep() { return new Set(S.picks.map(id => url(S.scene, S.traj, id))); }
+function releaseExcept(keep) { for (const [u, e] of pool) if (!keep.has(u)) { e.v.removeAttribute("src"); e.v.load(); e.v.remove(); pool.delete(u); } }
+function seekTo(e, f) {
+  const v = e.v, t = (f + 0.5) / FPS;
+  return e.ready.then((ok) => new Promise((res) => {
+    if (!ok) return res(false);
+    if (!v.seeking && Math.floor(v.currentTime * FPS + 1e-6) === f && v.readyState >= 2) return res(true);
+    let to = null, tries = 0;
+    const done = () => { v.removeEventListener("seeked", done); clearTimeout(to); res(true); };
+    const arm = () => { to = setTimeout(() => {
+      if (++tries < 3) { v.currentTime = t; arm(); }
+      else { v.removeEventListener("seeked", done); window.__dash.errors.push("seek timeout " + e.u); res(false); } }, 1500); };
+    v.addEventListener("seeked", done); window.__dash.seeks++; v.currentTime = t; arm();
+  }));
+}
+
+let panels = [];
+function buildPanels() {
+  const st = $("stage"); st.innerHTML = ""; panels = [];
+  S.picks.forEach((id, i) => {
+    const box = document.createElement("div"); box.className = "panel";
+    const cap = document.createElement("div"); cap.className = "cap";
+    const pick = document.createElement("label"); pick.className = "pick";
+    const shownLbl = document.createElement("span"); shownLbl.style.display = "contents";
+    const sel = document.createElement("select"); sel.setAttribute("aria-label", "Method for panel " + (i + 1));
+    D.groups.forEach(g => {
+      const og = document.createElement("optgroup"); og.label = g.label;
+      g.ids.forEach(vid => { const o = document.createElement("option"); o.value = vid; o.textContent = optText(VAR.get(vid)); og.appendChild(o); });
+      sel.appendChild(og);
+    });
+    sel.onchange = () => setPick(i, sel.value);
+    pick.appendChild(shownLbl); pick.appendChild(sel);
+    const fps = document.createElement("div"); fps.className = "fps num";
+    cap.appendChild(pick); cap.appendChild(fps);
+    const c = document.createElement("canvas"); c.width = 256; c.height = 256;
+    const fr = document.createElement("div"); fr.className = "frame"; fr.appendChild(c);
+    box.appendChild(cap); box.appendChild(fr); st.appendChild(box);
+    panels.push({ box, sel, shownLbl, fps, canvas: c });
+  });
+  updatePanelLabels();
+}
+function updatePanelLabels() {
+  panels.forEach((p, i) => {
+    const v = VAR.get(S.picks[i]);
+    p.sel.value = v.id; p.shownLbl.innerHTML = pickHTML(v);
+    p.fps.innerHTML = '<span class="n">' + Math.round(v.fps) + '</span><span class="u">FPS</span>';
+    p.box.classList.toggle("ref", v.id === "all");
+    p.box.title = optText(v) + ", " + v.fps.toFixed(1) + " FPS";
+  });
+}
+function layout() {
+  const st = $("stage"), wrap = $("stageWrap"), n = panels.length;
+  const cs = getComputedStyle(wrap);
+  const availW = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const gx = 18, gy = 14, capH = 50;
+  const options = window.innerWidth >= 760 ? [3] : [2, 1];
+  let best = { px: 0, cols: options[0] };
+  options.forEach(cols => {
+    const rows = Math.ceil(n / cols);
+    const px = Math.min((availW - gx * (cols - 1)) / cols, (availH - rows * capH - gy * (rows - 1)) / rows);
+    if (px > best.px) best = { px, cols };
+  });
+  const px = Math.max(150, Math.min(document.body.classList.contains("fs") ? 1024 : 512, Math.floor(best.px)));
+  st.classList.toggle("compact", px < 285);
+  st.style.columnGap = gx + "px"; st.style.rowGap = gy + "px";
+  st.style.gridTemplateColumns = "repeat(" + best.cols + ", " + px + "px)";
+  panels.forEach(p => { p.canvas.style.width = px + "px"; p.canvas.style.height = px + "px"; });
+}
+
+function render(f) {
+  const my = ++gen; busy = true;
+  const es = S.picks.map(id => getVideo(url(S.scene, S.traj, id)));
+  return Promise.all(es.map(e => seekTo(e, f))).then((oks) => {
+    if (my !== gen) return;
+    panels.forEach((p, i) => { if (oks[i]) p.canvas.getContext("2d").drawImage(es[i].v, 0, 0, 256, 256); });
+    shown = f;
+    window.__dash.shown = { frame: f, panelFrames: es.map(e => Math.floor(e.v.currentTime * FPS + 1e-6)), picks: S.picks.slice() };
+    frameUI();
+  }).finally(() => { if (my === gen) busy = false; });
+}
+function tick() {
+  if (S.playing && !busy && !scrubbing) {
+    const f = (frame0 + Math.floor((performance.now() - clock0) / 1000 * rate())) % nFrames();
+    if (f !== shown) { S.frame = f; render(f); }
+  }
+  requestAnimationFrame(tick);
+}
+function restartClock() { clock0 = performance.now(); frame0 = S.frame; }
+function setFrame(f) { S.frame = ((f % nFrames()) + nFrames()) % nFrames(); restartClock(); render(S.frame); }
+
+function setRangeFill(el) { const p = (el.max > el.min) ? 100 * (el.value - el.min) / (el.max - el.min) : 0; el.style.setProperty("--p", p + "%"); }
+function frameUI() {
+  const sc = $("scrub"); sc.max = nFrames() - 1;
+  if (!scrubbing && shown >= 0) sc.value = shown;
+  setRangeFill(sc);
+  $("fcount").textContent = (Math.max(shown, 0) + 1) + " / " + nFrames();
+}
+function refreshUI() {
+  document.querySelectorAll(".scene").forEach((t, i) => t.classList.toggle("on", i === S.scene));
+  document.querySelectorAll("#trajs button").forEach((t, i) => { t.classList.toggle("on", i === S.traj); t.setAttribute("aria-selected", i === S.traj); });
+  $("play").innerHTML = S.playing ? ICON_PAUSE : ICON_PLAY; $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
+  $("speed").value = String(S.speed);
+  frameUI();
+}
+function switchTo(change) {
+  const trajChanged = change.traj !== undefined && change.traj !== S.traj;
+  const f = shown < 0 ? 0 : shown;
+  Object.assign(S, change);
+  S.frame = trajChanged ? 0 : Math.min(f, nFrames() - 1);
+  currentKeep().forEach(getVideo); refreshUI(); restartClock();
+  render(S.frame).then(() => releaseExcept(currentKeep()));
+}
+function setPick(i, id) {
+  S.picks[i] = id; updatePanelLabels();
+  S.frame = shown < 0 ? 0 : shown; restartClock();
+  render(S.frame).then(() => releaseExcept(currentKeep()));
+}
+function setSpeed(i) { i = Math.max(0, Math.min(SPEEDS.length - 1, i)); S.speed = SPEEDS[i]; S.frame = shown < 0 ? 0 : shown; restartClock(); refreshUI(); }
+// full screen: the browser's full screen on the whole page, with the sidebar reduced to a rail of scene thumbnails; if the browser refuses, only the rail is applied
+function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function setFsClass(on) {
+  document.body.classList.toggle("fs", on);
+  $("fsBtn").innerHTML = on ? ICON_FS_EXIT : ICON_FS;
+  $("fsBtn").setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+  $("fsBtn").title = on ? "Exit full screen (F or Esc)" : "Full screen (F)";
+  layout(); if (shown >= 0) render(shown);
+}
+function toggleFull() {
+  const root = document.documentElement;
+  if (fsElement()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (document.body.classList.contains("fs")) { setFsClass(false); return; }
+  const req = root.requestFullscreen || root.webkitRequestFullscreen;
+  if (!req) { setFsClass(true); return; }
+  try { const p = req.call(root); if (p && p.catch) p.catch(() => setFsClass(true)); } catch (err) { setFsClass(true); }
+}
+["fullscreenchange", "webkitfullscreenchange"].forEach(ev => document.addEventListener(ev, () => setFsClass(!!fsElement())));
+function togglePlay() { S.playing = !S.playing; S.frame = shown < 0 ? 0 : shown; restartClock(); refreshUI(); }
+function step(d) { S.playing = false; refreshUI(); setFrame((shown < 0 ? 0 : shown) + d); }
+
+function build() {
+  D.scenes.forEach((s, i) => {
+    const b = document.createElement("button"); b.className = "scene";
+    b.innerHTML = '<img src="' + s.thumb + '" alt=""><div><div class="n">' + s.label + '</div><div class="d">' + s.desc + '</div></div>';
+    b.onclick = () => switchTo({ scene: i }); $("scenes").appendChild(b);
+  });
+  D.trajs.forEach((t, i) => {
+    const b = document.createElement("button"); b.textContent = t.name; b.setAttribute("role", "tab");
+    b.onclick = () => switchTo({ traj: i }); $("trajs").appendChild(b);
+  });
+  $("speed").innerHTML = SPEEDS.map(s => '<option value="' + s + '">' + s + '&times;</option>').join("");
+  $("speed").onchange = (e) => setSpeed(SPEEDS.indexOf(+e.target.value));
+  $("fsBtn").innerHTML = ICON_FS; $("fsBtn").onclick = () => { toggleFull(); $("fsBtn").blur(); };
+  $("play").onclick = togglePlay; $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
+  const sc = $("scrub");
+  sc.addEventListener("input", () => { scrubbing = true; setRangeFill(sc); S.frame = +sc.value; restartClock(); render(S.frame); });
+  sc.addEventListener("change", () => { scrubbing = false; S.frame = +sc.value; restartClock(); });
+  $("aboutBtn").onclick = () => $("about").showModal();
+  $("keysBtn").onclick = () => $("keys").showModal();
+  document.querySelectorAll("dialog").forEach(d => {
+    d.addEventListener("click", (e) => { if (e.target === d || e.target.hasAttribute("data-close")) d.close(); });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.querySelector("dialog[open]")) return;
+    if (e.target && e.target.tagName === "SELECT") return;
+    const k = e.key; let hit = true;
+    if (k === "ArrowLeft" || k === ",") step(-1);
+    else if (k === "ArrowRight" || k === ".") step(1);
+    else if (k === "ArrowUp") switchTo({ scene: (S.scene + D.scenes.length - 1) % D.scenes.length });
+    else if (k === "ArrowDown") switchTo({ scene: (S.scene + 1) % D.scenes.length });
+    else if (k >= "1" && k <= String(D.trajs.length)) switchTo({ traj: +k - 1 });
+    else if (k === " ") togglePlay();
+    else if (k === "[") setSpeed(SPEEDS.indexOf(S.speed) - 1);
+    else if (k === "]") setSpeed(SPEEDS.indexOf(S.speed) + 1);
+    else if (k === "f" || k === "F") toggleFull();
+    else hit = false;
+    if (hit) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+  });
+  window.addEventListener("resize", () => { layout(); if (shown >= 0) render(shown); });
+}
+window.__dash.state = () => ({ ...S, shown, nFrames: nFrames(), rate: rate() });
+window.__dash.api = { switchTo, togglePlay, step, setFrame, setSpeed, setPick, toggleFull };
+window.addEventListener("error", (e) => window.__dash.errors.push(String(e.message)));
+
+build(); buildPanels(); currentKeep().forEach(getVideo); layout(); refreshUI(); render(0).then(restartClock); requestAnimationFrame(tick);
+// ---- link to the talk deck (only when embedded): report the state while the deck records; show a recorded state on request
+(function () {
+  if (window.parent === window) return;
+  let last = "";
+  // highlights sent by the deck: 'p<i>' panel image, 'sel<i>' panel menu, 'traj<i>' trajectory tab, 'scene<i>' scene (comma-separated)
+  let HLS = '';
+  const applyHl = (h) => {
+    HLS = h || ''; document.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
+    HLS.split(',').filter(Boolean).forEach(k => { let m, el = null;
+      if ((m = k.match(/^p(\d)$/)) && panels[+m[1]]) el = panels[+m[1]].box.querySelector('.frame');
+      else if ((m = k.match(/^sel(\d)$/)) && panels[+m[1]]) el = panels[+m[1]].sel.closest('.pick') || panels[+m[1]].sel;
+      else if ((m = k.match(/^traj(\d)$/))) el = document.querySelectorAll('#trajs button')[+m[1]];
+      else if ((m = k.match(/^scene(\d)$/))) el = document.querySelectorAll('.scene')[+m[1]];
+      if (el) el.classList.add('hl'); });
+  };
+  const snap = () => ({ scene: S.scene, traj: S.traj, frame: Math.max(shown, 0), playing: S.playing, speed: S.speed, picks: S.picks.slice(), rate: rate(), n: nFrames(), hl: HLS });
+  setInterval(() => { const st = snap(), k = JSON.stringify(st); if (k !== last) { last = k; parent.postMessage({ tokenViewer: st }, "*"); } }, 100);
+  // exact: show exactly this frame, paused (rendering the video); otherwise follow the state, playing as recorded (playback)
+  window.__dash.applyState = async (st, exact) => {
+    let changed = false;
+    if (st.scene !== S.scene || st.traj !== S.traj) { S.scene = st.scene; S.traj = st.traj; changed = true; }
+    st.picks.forEach((id, i) => { if (S.picks[i] !== id) { S.picks[i] = id; changed = true; } });
+    if (changed) { updatePanelLabels(); currentKeep().forEach(getVideo); }
+    S.speed = st.speed; applyHl(st.hl);
+    if (exact) {
+      S.playing = false; S.frame = st.frame; refreshUI();
+      $("play").innerHTML = st.playing ? ICON_PAUSE : ICON_PLAY;
+      await render(st.frame); releaseExcept(currentKeep()); return window.__dash.shown;
+    }
+    S.playing = st.playing; refreshUI();
+    const drift = Math.abs(shown - st.frame);
+    if (changed || !st.playing || (drift > 3 && drift < nFrames() - 3)) { S.frame = st.frame; restartClock(); await render(st.frame); }
+    return true;
+  };
+  window.addEventListener("message", (e) => {
+    const m = e.data; if (!m) return;
+    if (m.tokenViewerHello) last = "";
+    if (m.tokenViewerApply) window.__dash.applyState(m.tokenViewerApply, false);
+    if (m.tokenViewerCmd) {   // a click of the deck's viewer slide: go to this state, keep playing
+      const c = m.tokenViewerCmd, ch = {};
+      if (c.scene !== undefined && c.scene !== S.scene) ch.scene = c.scene;
+      if (c.traj !== undefined && c.traj !== S.traj) ch.traj = c.traj;
+      if (Object.keys(ch).length) switchTo(ch);
+      if (c.picks) c.picks.forEach((id, i) => { if (S.picks[i] !== id) setPick(i, id); });
+      applyHl(c.hl);
+    }
+  });
+})();
+</script>
+</body>
+</html>

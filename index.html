@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--HEAD-START-->
+<title>Tokens as Locality-Preserving Anchors</title>
+<meta name="description" content="Target-adaptive token routing: a router selects, for every target viewpoint, the few source tokens that the decoder of a transformer-based view synthesis model needs, so the time per frame barely grows with the number of source views.">
+<meta property="og:title" content="Tokens as Locality-Preserving Anchors">
+<meta property="og:description" content="Scalable novel view synthesis with target-adaptive token routing.">
+<meta property="og:image" content="static/images/teaser.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans%7CNoto+Sans:400,400i,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="static/css/style.css">
+<!--HEAD-END-->
+</head>
+<body>
+<!--BODY-START-->
+<header class="hero">
+  <div class="wrap center">
+    <h1 class="title">
+      <span class="main">Tokens as <span class="hl">Locality-Preserving</span> Anchors</span>
+      <span class="sub">Scalable Novel View Synthesis with Target-Adaptive Token Routing</span>
+    </h1>
+    <div class="authors"><span class="author">Sagnik Ghosh</span><span class="author">Aswin C. Sankaranarayanan</span></div>
+    <div class="affils"><span>Carnegie Mellon University</span></div>
+    <nav class="links" aria-label="Paper links">
+      <a class="btn" href="https://arxiv.org/pdf/2611.31156" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.5h8l4.5 4.5v14.5H6z M14 2.5V7h4.5 M8.8 12h6.4 M8.8 15h6.4 M8.8 18h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg><span>Paper</span></a>
+      <a class="btn" href="https://arxiv.org/abs/2611.31156" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 12 5l7 14 M8 13h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg><span>arXiv</span></a>
+      <a class="btn" href="#video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg><span>Video</span></a>
+      <a class="btn" href="#interactive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M4 7.5l8 4.5 8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Interactive</span></a>
+      <a class="btn" href="#bibtex"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 10h14M5 14h9M5 18h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>BibTeX</span></a>
+    </nav>
+    <div class="reel" id="reel">
+      <video src="static/videos/hero_s1.mp4" poster="static/images/hero_poster1.jpg" muted loop playsinline preload="metadata" aria-label="Novel view of a hotel room"></video>
+      <video src="static/videos/hero_s2.mp4" poster="static/images/hero_poster2.jpg" muted loop playsinline preload="metadata" aria-label="Novel view of an atrium"></video>
+      <video src="static/videos/hero_s4.mp4" poster="static/images/hero_poster4.jpg" muted loop playsinline preload="metadata" aria-label="Novel view of a statue"></video>
+      <video src="static/videos/hero_s3.mp4" poster="static/images/hero_poster3.jpg" muted loop playsinline preload="metadata" aria-label="Novel view of a plaque"></video>
+      <video src="static/videos/hero_s5.mp4" poster="static/images/hero_poster5.jpg" muted loop playsinline preload="metadata" aria-label="Novel view of a shop"></video>
+    </div>
+    <p class="reel-cap">Novel views rendered by our model from 16 source views (DL3DV).</p>
+  </div>
+</header>
+
+<section id="abstract" class="section">
+  <div class="wrap narrow">
+    <h2 class="h2 center">Abstract</h2>
+    <p class="abstract">Transformer-based view synthesis models render each target viewpoint from the source images, without an explicit 3D representation, which lets them reproduce fine detail and view-dependent effects. However, their decoder attends to every source token for every frame, so rendering slows with each source image. Rasterization avoids this by culling primitives that the viewpoint does not see, but source tokens cannot be culled this way, as they have no explicit position or extent. Our key insight is that source tokens are nonetheless spatial anchors: each encodes a local region of the scene, so the decoder's attention for any viewpoint concentrates on a few of them. A lightweight router predicts these tokens from the source tokens and the viewpoint, and the decoder attends only to a fixed budget of top-ranked tokens, so its cost no longer depends on the number of source tokens. We supervise the router with the decoder's attention, using non-maximum suppression to demote redundant tokens. With 24 source images and two views' worth of tokens, our model renders 6.4 times faster than LagerNVS, at a PSNR only 0.68&nbsp;dB lower. One ranking serves every budget, so the budget can change at render time.</p>
+  </div>
+</section>
+
+<section class="section tight">
+  <div class="wrap narrow">
+    <div class="tldr"><b>TL;DR</b> The decoder of a view synthesis transformer attends to every source token for every frame. We <b>cull source tokens</b> instead: a router picks the few that each viewpoint needs, so the time per frame <b>barely grows as source views are added</b>.</div>
+  </div>
+</section>
+
+<section id="video" class="section">
+  <div class="wrap">
+    <h2 class="h2 center">Video</h2>
+    <figure class="video">
+      <video controls playsinline preload="none" poster="static/images/overview_poster.jpg" aria-label="Narrated overview of the method">
+        <source src="static/videos/overview.mp4" type="video/mp4">
+      </video>
+      <figcaption>A narrated overview (6 minutes).</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="method" class="section">
+  <div class="wrap">
+    <h2 class="h2 center">How it works</h2>
+
+    <div class="card wide">
+      <div class="card-txt">
+        <h3>Culling for source tokens</h3>
+        <p>A rasterizer discards the primitives that a viewpoint does not see, so its cost follows what is visible rather than the size of the scene. The decoder of a transformer-based view synthesis model has no such step: it attends to every source token for every frame, so rendering slows with each source view. Source tokens have no explicit position that could be tested against the viewpoint, but each of them encodes a local part of the scene. Our router predicts which of them the decoder needs, and the decoder attends only to those.</p>
+      </div>
+      <div class="media">
+        <img src="static/images/teaser.png" alt="Three panels: a rasterizer culls a village to the viewpoint's frustum; all source tokens pass through a router that keeps the top B for the viewpoint; frame rate against source views, flat for the top B and falling for all tokens." loading="lazy">
+        <p class="media-cap">Panel b is an illustration. Panel c: frames per second at 256&nbsp;×&nbsp;256 on an RTX PRO 5000, for LagerNVS with all source tokens and for our model with two views' worth of tokens.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-txt">
+        <h3>Source tokens take most of the time per frame</h3>
+        <p>We profile the decoder of LagerNVS. The work on source tokens (<span class="c-or">orange</span>) grows by 3.2&nbsp;ms with every added source view, and with 24 source views it takes 94% of the 79&nbsp;ms per frame. The work on the target image alone (gray) stays near 4&nbsp;ms.</p>
+        <p>With a fixed budget of <i>B</i> source tokens, the time per frame barely depends on the number of source views. With two views' worth of tokens it is 12&nbsp;ms at 24 source views, of which the router (<span class="c-bl">blue</span>) takes under 1&nbsp;ms.</p>
+        <p class="num">Time per frame at 256&nbsp;×&nbsp;256 on one RTX PRO 5000.</p>
+      </div>
+      <div class="media"><img src="static/images/cost.png" alt="A decoder block with target-only parts in gray and source-token parts in orange, next to two plots of time per frame against source views: all source tokens rises to 79 ms, ours with 2,738 tokens stays at 12 ms." loading="lazy"></div>
+    </div>
+
+    <div class="card flip">
+      <div class="card-txt">
+        <h3>Each viewpoint attends to a few local tokens</h3>
+        <p>A target patch attends to the few source tokens that show the same part of the scene in each source view (a). This holds for every target patch of the viewpoint (b), so each source token acts as a local anchor in the scene.</p>
+        <p>Over the 140 test scenes of DL3DV, two views' worth of source tokens receive 85% of the decoder's attention with 24 source views, and which tokens these are changes from one viewpoint to the next.</p>
+      </div>
+      <div class="media"><img src="static/images/attn.webp" alt="A classroom target viewpoint with four marked patches, each attending to a few tokens in four source views; below, the attention matrix from target tokens to source tokens, with narrow diagonal bands in each view." loading="lazy"></div>
+    </div>
+
+    <div class="card wide">
+      <div class="card-txt">
+        <h3>A router picks the tokens before the decoder runs</h3>
+        <p>We split the router into a scene branch and a target branch. The scene branch computes a key for every source token once per scene, attending within each source view and across all of them, and the keys are cached with the source tokens. For every target viewpoint, the target branch maps the viewpoint to a query, a score head scores all <i>N</i> keys, and the decoder attends only to the <i>B</i> top-scoring tokens. We adapt the pretrained decoder to these sparse subsets with low-rank updates, and with all tokens our model reduces exactly to LagerNVS.</p>
+      </div>
+      <div class="media"><img src="static/images/method.png" alt="Overview: source views pass once per scene through the encoder and the router's scene branch, which produces cached keys; per target viewpoint, the target branch gives a query, the score head ranks all keys, the top B tokens are gathered and decoded into the novel view." loading="lazy"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-txt">
+        <h3>Supervised by the decoder's attention, with non-maximum suppression</h3>
+        <p>We train the router to rank the source tokens by how much the frozen decoder attends to them for the target viewpoint. A surface seen in several source views receives attention in each of them, in the same part of the target image, so ranking by attention alone spends the budget on copies and leaves other parts uncovered.</p>
+        <p>Non-maximum suppression discounts each token by the overlap of its attention profile with those of the tokens already selected. The gains it records never increase, so the top <i>B</i> tokens are its selection for every budget <i>B</i>: one ranking serves every budget.</p>
+      </div>
+      <div class="media">
+        <img src="static/images/nms.webp" alt="Routers trained without and with non-maximum suppression, each selecting one view's worth of tokens in two source views, and their renders; without it, a boxed region is rendered poorly." loading="lazy">
+        <p class="media-cap">Routers trained without and with NMS select one view's worth of tokens on a target of DL3DV, all from the same 2 of its 8 source views (unselected tokens darkened). The box marks a region that the router without NMS leaves uncovered.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="interactive" class="dark">
+  <section class="dsection">
+    <div class="wrap">
+      <div class="dhead">
+        <div class="kicker">Interactive</div>
+        <h2 class="dh2">Whole views or tokens, along a camera path</h2>
+        <p class="lead">Each video follows a smooth path through the 16 source views of a test scene of DL3DV, rendered at 256&nbsp;×&nbsp;256 by our model fine-tuned with 16 source views. The whole view gives the decoder all tokens of the source view from which our router selects the most tokens in that frame, and parts of the scene vanish or appear whenever that view changes. Our router selects tokens for every frame.</p>
+      </div>
+      <div class="strip-scroll">
+        <div class="strip">
+          <div class="strip-labels" aria-hidden="true">
+            <div class="ref"><b>Whole view</b><span>1,369 tokens</span><span class="fps">121 FPS</span></div>
+            <div class="ours"><b>Ours</b><span>1,369 tokens</span><span class="fps">122 FPS</span></div>
+            <div class="ours"><b>Ours</b><span>2,738 tokens</span><span class="fps">83 FPS</span></div>
+            <div class="ours"><b>Ours</b><span>4,107 tokens</span><span class="fps">66 FPS</span></div>
+            <div class="ref"><b>All tokens</b><span>21,904 (LagerNVS)</span><span class="fps">20 FPS</span></div>
+          </div>
+          <div class="stage">
+            <video id="cmp" src="static/videos/cmp_scene1.mp4" poster="static/images/cmp_poster1.jpg" muted loop playsinline preload="metadata"
+              aria-label="Five renders of the same camera path side by side: whole view, ours at 1,369, 2,738 and 4,107 tokens, and all tokens"></video>
+            <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="tools">
+        <button class="tool" id="cmpPlay" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="cmpIcon" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg><span id="cmpPlayTxt">Pause</span></button>
+        <span class="tl-time" id="cmpTime">0.0 / 0.0 s</span>
+        <a class="tool go" href="viewer/index.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Open the full viewer</a>
+      </div>
+      <div class="gal-picker" role="tablist" aria-label="Scenes" id="scenes">
+        <button class="gal-card" role="tab" aria-selected="true" data-s="1"><img class="gal-thumb" src="static/thumbs/scene1.jpg" alt=""><span class="gal-txt"><em>Scene 1</em><b>Hotel room</b><span>16 source views</span></span></button>
+        <button class="gal-card" role="tab" aria-selected="false" data-s="2"><img class="gal-thumb" src="static/thumbs/scene2.jpg" alt=""><span class="gal-txt"><em>Scene 2</em><b>Atrium</b><span>16 source views</span></span></button>
+        <button class="gal-card" role="tab" aria-selected="false" data-s="3"><img class="gal-thumb" src="static/thumbs/scene3.jpg" alt=""><span class="gal-txt"><em>Scene 3</em><b>Plaque</b><span>16 source views</span></span></button>
+        <button class="gal-card" role="tab" aria-selected="false" data-s="4"><img class="gal-thumb" src="static/thumbs/scene4.jpg" alt=""><span class="gal-txt"><em>Scene 4</em><b>Statue</b><span>16 source views</span></span></button>
+        <button class="gal-card" role="tab" aria-selected="false" data-s="5"><img class="gal-thumb" src="static/thumbs/scene5.jpg" alt=""><span class="gal-txt"><em>Scene 5</em><b>Shop</b><span>16 source views</span></span></button>
+      </div>
+      <p class="note">Frame rates are measured on one RTX PRO 5000 with 16 source views, once the scene is encoded. The full viewer adds a simulated head motion and lets each panel show any of 11 budgets.</p>
+    </div>
+  </section>
+</div>
+
+<section id="results" class="section">
+  <div class="wrap">
+    <h2 class="h2 center">Results</h2>
+    <div class="seg" role="tablist" aria-label="Results">
+      <button class="seg-b" role="tab" aria-selected="true" aria-controls="tab-speed" id="b-speed">Speed and quality</button>
+      <button class="seg-b" role="tab" aria-selected="false" aria-controls="tab-posefree" id="b-posefree">Without input poses</button>
+      <button class="seg-b" role="tab" aria-selected="false" aria-controls="tab-posed" id="b-posed">With input poses</button>
+      <button class="seg-b" role="tab" aria-selected="false" aria-controls="tab-selection" id="b-selection">Selection strategies</button>
+      <button class="seg-b" role="tab" aria-selected="false" aria-controls="tab-switch" id="b-switch">Along a camera path</button>
+    </div>
+
+    <div class="res-pane" id="tab-speed" role="tabpanel" aria-labelledby="b-speed">
+      <p class="res-lead">With two views' worth of tokens, the frame rate drops only from 87 to 82 FPS as the source views go from 4 to 24, while LagerNVS with all tokens drops from 70 to 13 FPS. With 24 source views, our model is 6.4 times as fast, at a PSNR 0.68&nbsp;dB lower.</p>
+      <figure class="paper-result plot"><img src="static/images/speed.png" alt="Frames per second against PSNR for all source tokens and for ours at 1,369 and 2,738 tokens, with 4 to 24 source views." loading="lazy"></figure>
+      <p class="res-cap">Frames per second against PSNR on the 140 test scenes of DL3DV, with 4 to 24 source views (numbers next to the points) spaced evenly over the first 300 frames of each scene and the same 228 target viewpoints per scene. <i>B</i> is the number of source tokens, 1,369 per view, that our decoder attends to per frame; teal shows increasing <i>B</i> at 24 views, up to all 32,856 tokens. Speed is measured at 256&nbsp;×&nbsp;256 on an RTX PRO 5000 and excludes the work done once per scene, such as encoding the source views.</p>
+    </div>
+
+    <div class="res-pane" id="tab-posefree" role="tabpanel" aria-labelledby="b-posefree" hidden>
+      <p class="res-lead">Without input poses, our model with one view's worth of tokens renders higher quality than the feed-forward Gaussian splatting methods on all three benchmarks. Once their Gaussians are predicted, the splatting methods render many more frames per second.</p>
+      <div class="table-wrap">
+        <table class="res">
+          <thead><tr><th class="l">Method</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>FPS ↑</th></tr></thead>
+          <tbody>
+            <tr class="grp"><td colspan="5">RealEstate10K, 2 source views</td></tr>
+            <tr><td>NoPoSplat*</td><td class="r3">25.03</td><td class="r3">0.838</td><td class="r3">0.160</td><td>868</td></tr>
+            <tr><td>SPFSplatV2*</td><td class="r2">26.16</td><td class="r2">0.861</td><td class="r2">0.146</td><td>828</td></tr>
+            <tr><td>YoNoSplat</td><td>24.63</td><td>0.824</td><td>0.176</td><td>867</td></tr>
+            <tr><td>WorldMirror</td><td>22.74</td><td>0.792</td><td>0.208</td><td>847</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 1,369</td><td class="r1">27.27</td><td class="r1">0.865</td><td class="r1">0.142</td><td>41</td></tr>
+            <tr class="ref"><td>LagerNVS, <i>B</i> = <i>N</i></td><td>27.61</td><td>0.872</td><td>0.136</td><td>34</td></tr>
+            <tr class="grp"><td colspan="5">CO3D, 9 source views</td></tr>
+            <tr><td>YoNoSplat</td><td>22.08</td><td>0.715</td><td>0.388</td><td>493</td></tr>
+            <tr><td>WorldMirror†</td><td>21.12</td><td>0.712</td><td>0.393</td><td>527</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 1,369</td><td class="r3">25.45</td><td class="r3">0.775</td><td class="r3">0.297</td><td>42</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 2,738</td><td class="r2">26.04</td><td class="r2">0.784</td><td class="r2">0.282</td><td>33</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 4,107</td><td class="r1">26.18</td><td class="r1">0.787</td><td class="r1">0.278</td><td>29</td></tr>
+            <tr class="ref"><td>LagerNVS, <i>B</i> = <i>N</i></td><td>26.43</td><td>0.793</td><td>0.271</td><td>17</td></tr>
+            <tr class="grp"><td colspan="5">Mip-NeRF 360, 9 source views</td></tr>
+            <tr><td>YoNoSplat</td><td>18.67</td><td>0.439</td><td>0.525</td><td>504</td></tr>
+            <tr><td>WorldMirror</td><td>17.71</td><td>0.418</td><td>0.502</td><td>498</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 1,369</td><td class="r3">19.99</td><td class="r3">0.484</td><td class="r3">0.426</td><td>42</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 2,738</td><td class="r2">20.32</td><td class="r2">0.494</td><td class="r2">0.410</td><td>33</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 4,107</td><td class="r1">20.40</td><td class="r1">0.496</td><td class="r1">0.407</td><td>29</td></tr>
+            <tr class="ref"><td>LagerNVS, <i>B</i> = <i>N</i></td><td>20.65</td><td>0.503</td><td>0.402</td><td>18</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="res-cap">RealEstate10K uses the NoPoSplat split, scored at 256&nbsp;×&nbsp;256; CO3D and Mip-NeRF 360 use the ReconFusion splits, scored at 512&nbsp;×&nbsp;512. Every method estimates and refines the target pose. *Numbers from the papers. †Trained on CO3D. Ours builds on the general model of LagerNVS and reduces to it with all tokens (gray); 1,369 tokens are one view. FPS counts target viewpoints rendered per second on one RTX PRO 5000 once the scene is encoded, with the fastest renderer that reproduces each splatting method's images. Colors mark the <span class="k r1">best</span>, <span class="k r2">second</span> and <span class="k r3">third</span> entry in each quality column of each block, excluding the gray rows.</p>
+    </div>
+
+    <div class="res-pane" id="tab-posed" role="tabpanel" aria-labelledby="b-posed" hidden>
+      <p class="res-lead">With input poses on DL3DV, every budget renders above DepthSplat and CLiFT, and three views' worth of tokens is within 0.21&nbsp;dB of all tokens.</p>
+      <div class="table-wrap">
+        <table class="res">
+          <thead>
+            <tr><th class="l"></th><th colspan="3">4 source views</th><th colspan="3">6 source views</th></tr>
+            <tr><th class="l">Method</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DepthSplat <sub>256×256</sub></td><td>22.39</td><td>0.767</td><td>0.186</td><td>23.56</td><td>0.813</td><td>0.151</td></tr>
+            <tr><td>DepthSplat <sub>256×448</sub>*</td><td>23.06</td><td>0.786</td><td>0.172</td><td>23.87</td><td>0.821</td><td>0.147</td></tr>
+            <tr><td>CLiFT <sub>256×448</sub>*</td><td>23.42</td><td>0.754</td><td>0.203</td><td>24.78</td><td>0.798</td><td>0.166</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 1,369</td><td class="r3">26.79</td><td class="r3">0.857</td><td class="r3">0.105</td><td class="r3">28.22</td><td class="r3">0.889</td><td class="r3">0.082</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 2,738</td><td class="r2">27.41</td><td class="r2">0.867</td><td class="r2">0.096</td><td class="r2">29.18</td><td class="r2">0.901</td><td class="r2">0.070</td></tr>
+            <tr class="ours"><td>Ours, <i>B</i> = 4,107</td><td class="r1">27.48</td><td class="r1">0.869</td><td class="r1">0.095</td><td class="r1">29.28</td><td class="r1">0.903</td><td class="r1">0.069</td></tr>
+            <tr class="ref"><td>LagerNVS, <i>B</i> = <i>N</i></td><td>27.60</td><td>0.871</td><td>0.094</td><td>29.49</td><td>0.906</td><td>0.068</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="res-cap">The DepthSplat split of DL3DV (140 scenes). All methods are scored on the central square of each frame, resized to 256&nbsp;×&nbsp;256; subscripts give the input resolution. *These inputs cover 1.66 times (DepthSplat, at 0.95 times the height) and 1.75 times (CLiFT) the width of our crops. With all <i>N</i> tokens, our model reduces to LagerNVS (gray). Colors mark the <span class="k r1">best</span>, <span class="k r2">second</span> and <span class="k r3">third</span> entry in each column, excluding the gray row.</p>
+    </div>
+
+    <div class="res-pane" id="tab-selection" role="tabpanel" aria-labelledby="b-selection" hidden>
+      <p class="res-lead">With one view's worth of tokens, our router renders better than a geometric cost computed from predicted depth (by 1.62&nbsp;dB with 24 source views), than routing without NMS and than random tokens. Whole source views fall behind with few source views and catch up only with many.</p>
+      <figure class="paper-result plot"><img src="static/images/selection.png" alt="PSNR against source views for ours, ours without NMS, whole view, geometric cost, random tokens and all source tokens." loading="lazy"></figure>
+      <p class="res-cap">PSNR with one view's worth of source tokens (<i>B</i> = 1,369) on the 140 test scenes of DL3DV, with 4 to 24 source views spaced evenly over the first 300 frames and the same 228 target viewpoints per scene. Each strategy renders through a decoder adapted to its own selections in the same way as ours, and LagerNVS attends to all source tokens.</p>
+    </div>
+
+    <div class="res-pane" id="tab-switch" role="tabpanel" aria-labelledby="b-switch" hidden>
+      <p class="res-lead">Whole views are all or nothing: whenever the selected view changes, parts of the scene vanish or turn translucent. Our router shifts its tokens between views gradually.</p>
+      <figure class="paper-result mid"><img src="static/images/view_switch.webp" alt="Source-view usage along a 300-frame trajectory for the whole view and for our router, and renders at a switch where the boxed content turns translucent with the whole view." loading="lazy"></figure>
+      <p class="res-cap">Switching source views along a 300-frame trajectory, with four source views captured at the vertical lines. The whole view (orange) is the source view from which our router selects the most tokens; blue lanes show the share of our router's tokens from each view. At the marked switch, the boxed content turns translucent with the whole view, while our router keeps 95% of its tokens.</p>
+    </div>
+  </div>
+</section>
+
+<section id="bibtex" class="section">
+  <div class="wrap narrow">
+    <h2 class="h2 center">BibTeX</h2>
+    <pre class="bib"><code>@misc{ghosh2026tokenslocalitypreservinganchorsscalable,
+      title={Tokens as Locality-Preserving Anchors: Scalable Novel View Synthesis with Target-Adaptive Token Routing}, 
+      author={Sagnik Ghosh and Aswin C. Sankaranarayanan},
+      year={2026},
+      eprint={2611.31156},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2611.31156}, 
+}</code></pre>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap narrow center">Page design adapted from the <a href="https://ubc-vision.github.io/solv3r/">Solv3R project page</a>.</div>
+</footer>
+<script src="static/js/main.js"></script>
+<!--BODY-END-->
+</body>
+</html>
